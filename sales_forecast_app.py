@@ -249,10 +249,6 @@ class SalesForecastApp:
                  font=("Arial", 10), padx=20).pack(side=tk.LEFT, padx=10)
     
         dialog.wait_window()
-                
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load data:\n{str(e)}")
-                self.status_var.set("❌ Error loading data")
     
     def generate_sample_data(self):
         try:
@@ -621,3 +617,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
