@@ -149,21 +149,106 @@ class SalesForecastApp:
             title="Select Sales Data CSV",
             filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
         )
-        
+    
         if filename:
             try:
+                # Load CSV
                 self.df = pd.read_csv(filename)
-                self.df['Date'] = pd.to_datetime(self.df['Date'])
+            
+                # Show column selection dialog if needed
+                if 'Date' not in self.df.columns or 'Sales' not in self.df.columns:
+                    self.select_columns_dialog()
+                    if not hasattr(self, 'date_col') or not hasattr(self, 'sales_col'):
+                        return  # User cancelled
+                else:
+                    self.date_col = 'Date'
+                    self.sales_col = 'Sales'
+            
+                # Rename columns to standard names
+                self.df = self.df.rename(columns={
+                    self.date_col: 'Date',
+                    self.sales_col: 'Sales'
+                })
+            
+                # Keep only Date and Sales columns
+                self.df = self.df[['Date', 'Sales']]
+            
+                # Convert Date column
+                self.df['Date'] = pd.to_datetime(self.df['Date'], errors='coerce')
+            
+                # Remove rows with invalid dates or sales
+                self.df = self.df.dropna()
+            
+                # Ensure Sales is numeric
+                self.df['Sales'] = pd.to_numeric(self.df['Sales'], errors='coerce')
+                self.df = self.df.dropna()
+            
+                # Sort by date
                 self.df = self.df.sort_values('Date').reset_index(drop=True)
-                
+            
+                if len(self.df) < 100:
+                    messagebox.showwarning("Warning", 
+                        f"Only {len(self.df)} valid records found. Need at least 100 records for reliable forecasting.")
+                    return
+            
                 self.data_loaded = True
                 self.train_btn.config(state=tk.NORMAL)
                 self.status_var.set(f"✅ Data loaded: {len(self.df)} records")
-                
+            
                 # Show data preview
                 self.show_data_preview()
-                
-                messagebox.showinfo("Success", f"Loaded {len(self.df)} records successfully!")
+            
+                messagebox.showinfo("Success", 
+                    f"Loaded {len(self.df)} records successfully!\n\n"
+                    f"Date range: {self.df['Date'].min().date()} to {self.df['Date'].max().date()}")
+            
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load data:\n{str(e)}\n\n"
+                    "Please ensure your CSV has 'Date' and 'Sales' columns.")
+                self.status_var.set("❌ Error loading data")
+
+    def select_columns_dialog(self):
+        """Dialog to let user select which columns to use"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Select Columns")
+        dialog.geometry("400x200")
+        dialog.transient(self.root)
+        dialog.grab_set()
+    
+        tk.Label(dialog, text="Your CSV doesn't have 'Date' and 'Sales' columns.\n", "Please select which columns to use:", font=("Arial", 11)).pack(pady=15)
+    
+        # Date column selector
+        date_frame = tk.Frame(dialog)
+        date_frame.pack(pady=10)
+        tk.Label(date_frame, text="Date Column:", font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
+        date_var = tk.StringVar(value=self.df.columns[0])
+        date_dropdown = ttk.Combobox(date_frame, textvariable=date_var, values=list(self.df.columns), width=20)
+        date_dropdown.pack(side=tk.LEFT)
+    
+        # Sales column selector
+        sales_frame = tk.Frame(dialog)
+        sales_frame.pack(pady=10)
+        tk.Label(sales_frame, text="Sales Column:", font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
+        sales_var = tk.StringVar(value=self.df.columns[1] if len(self.df.columns) > 1 else self.df.columns[0])
+        sales_dropdown = ttk.Combobox(sales_frame, textvariable=sales_var, values=list(self.df.columns), width=20)
+        sales_dropdown.pack(side=tk.LEFT)
+    
+        def on_ok():
+            self.date_col = date_var.get()
+            self.sales_col = sales_var.get()
+            dialog.destroy()
+    
+        def on_cancel():
+            dialog.destroy()
+    
+        btn_frame = tk.Frame(dialog)
+        btn_frame.pack(pady=15)
+        tk.Button(btn_frame, text="OK", command=on_ok, bg="#2E86AB", fg="white",
+                 font=("Arial", 10), padx=20).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="Cancel", command=on_cancel, bg="#C73E1D", fg="white",
+                 font=("Arial", 10), padx=20).pack(side=tk.LEFT, padx=10)
+    
+        dialog.wait_window()
                 
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load data:\n{str(e)}")
@@ -534,4 +619,5 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
+
     main()
