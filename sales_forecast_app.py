@@ -495,7 +495,7 @@ Last 10 Records:
             widget.destroy()
         
         # Create figure
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
         
         # Historical + Forecast
         historical = self.df_processed.tail(180)
@@ -617,4 +617,5 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
